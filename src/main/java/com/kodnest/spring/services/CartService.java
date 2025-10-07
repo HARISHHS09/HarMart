@@ -140,4 +140,9 @@ public class CartService {
 
         cartRepository.deleteCartItem(userId, productId);
     }
+    
+    public int getCartItemCount(int userId) {
+        return cartRepository.countByUser_UserId(userId);
+    }
+
 }

@@ -90,4 +90,17 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
+    @GetMapping("/items/count")
+    public ResponseEntity<Integer> getCartItemCount(HttpServletRequest request) {
+        // Get the authenticated user from the request (if you store it there)
+        User user = (User) request.getAttribute("authenticatedUser");
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        int count = cartService.getCartItemCount(user.getUserId());
+        return ResponseEntity.ok(count);
+    }
+
 }
