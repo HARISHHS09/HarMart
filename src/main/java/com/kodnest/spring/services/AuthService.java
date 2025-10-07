@@ -2,8 +2,8 @@ package com.kodnest.spring.services;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,6 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     // Injecting jwt.secret from properties file
-    @Autowired
     public AuthService(UserRepository userRepository, JWTTokenRepository jwtTokenRepository,
                        @Value("${jwt.secret}") String jwtSecret) {
         this.userRepository = userRepository;
@@ -88,23 +87,40 @@ public class AuthService {
     
     public boolean validateToken(String token) {
         try {
+            System.err.println("VALIDATING TOKEN...");
+
+            // Parse and validate the token
             Jwts.parserBuilder()
-                    .setSigningKey(SIGNING_KEY)
-                    .build()
-                    .parseClaimsJws(token); // Will throw exception if invalid or expired
-            return true;
+                .setSigningKey(SIGNING_KEY)
+                .build()
+                .parseClaimsJws(token);
+
+            // Check if the token exists in the database and is not expired
+            Optional<JWTToken> jwtToken = jwtTokenRepository.findByToken(token);
+            if (jwtToken.isPresent()) {
+                System.err.println("Token Expiry: " + jwtToken.get().getExpiresAt());
+                System.err.println("Current Time: " + LocalDateTime.now());
+                return jwtToken.get().getExpiresAt().isAfter(LocalDateTime.now());
+            }
+
+            return false;
         } catch (Exception e) {
+            System.err.println("Token validation failed: " + e.getMessage());
             return false;
         }
     }
-    
-	public String extractUsername(String token) {
-		 return Jwts.parserBuilder()
-	                .setSigningKey(SIGNING_KEY)
-	                .build()
-	                .parseClaimsJws(token)
-	                .getBody()
-	                .getSubject(); // subject = username
-	}
 
+    public String extractUsername(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SIGNING_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    
+    public void logout(User user) {
+        jwtTokenRepository.deleteByUserId(user.getUserId());
+    }
 }
